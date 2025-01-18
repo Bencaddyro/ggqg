@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock, Weak};
 use uuid::Uuid;
 use std::fmt::Write;
 
-use crate::edge::{Edge, WeakEdge};
+use crate::edge::{Edge};
 
 
 #[derive(Clone)]
@@ -21,15 +21,15 @@ where
         RwLock<Vec<Edge<N, E>>>,
     )>,
 }
-// impl<N, E> WeakNode<N, E>
-// where
-//     N: Clone,
-//     E: Clone,
-// {
-//     pub fn upgrade(&self) -> Option<Node<N, E>> {
-//         self.internal.upgrade().map(|internal| Node { internal })
-//     }
-// }
+impl<N, E> WeakNode<N, E>
+where
+    N: Clone,
+    E: Clone,
+{
+    pub fn upgrade(&self) -> Option<Node<N, E>> {
+        self.internal.upgrade().map(|internal| Node { internal })
+    }
+}
 
 #[derive(Clone)]
 pub struct Node<N, E>
@@ -40,8 +40,8 @@ where
     internal: Arc<(
         Uuid,
         RwLock<N>,
-        RwLock<Vec<Edge<N, E>>>,
-        RwLock<Vec<Edge<N, E>>>,
+        RwLock<Vec<Edge<N, E>>>, //head
+        RwLock<Vec<Edge<N, E>>>, //tail
     )>,
 }
 
@@ -66,28 +66,32 @@ where
     pub fn value(&self) -> &RwLock<N> {
         &self.internal.1
     }
-    // pub fn downgrade(&self) -> WeakNode<N, E> {
-    //     WeakNode {
-    //         internal: Arc::downgrade(&self.internal),
-    //     }
-    // }
-    //
-    // pub fn add_next(&self, node: Node<N, E>, edge: E) {
-    //     if let Ok(mut edges) = self.internal.1.write() {
-    //         edges.next.push((edge.clone(), node.downgrade()));
-    //     }
-    //     if let Ok(mut edges) = node.internal.1.write() {
-    //         edges.previous.push((edge.clone(), self.downgrade()));
-    //     }
-    // }
-    // pub fn add_previous(&self, node: Node<N, E>, edge: E) {
-    //     if let Ok(mut edges) = self.internal.1.write() {
-    //         edges.previous.push((edge.clone(), node.downgrade()));
-    //     }
-    //     if let Ok(mut edges) = node.internal.1.write() {
-    //         edges.next.push((edge.clone(), self.downgrade()));
-    //     }
-    // }
+    pub fn downgrade(&self) -> WeakNode<N, E> {
+        WeakNode {
+            internal: Arc::downgrade(&self.internal),
+        }
+    }
+//     pub fn add_head(&self, node: Node<N, E>, edge: E) {
+//         
+//         if let Ok(mut head) = self.internal.2.write() {
+//             head.push(Edge::new(edge.clone(), node.downgrade()));
+//         }
+//         
+//         
+//         if let Ok(mut edges) = node.internal.3.write() {
+//             edges.previous.push((edge.clone(), self.downgrade()));
+//         }
+//         
+//         
+//     }
+//     pub fn add_previous(&self, node: Node<N, E>, edge: E) {
+//         if let Ok(mut edges) = self.internal.1.write() {
+//             edges.previous.push((edge.clone(), node.downgrade()));
+//         }
+//         if let Ok(mut edges) = node.internal.1.write() {
+//             edges.next.push((edge.clone(), self.downgrade()));
+//         }
+//     }
 
     // find
     // remove
