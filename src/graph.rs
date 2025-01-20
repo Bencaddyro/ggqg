@@ -1,12 +1,11 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
-use std::collections::HashMap;
+use std::fmt::Write;
 use std::sync::{Arc, RwLock, Weak};
 use uuid::Uuid;
-use std::fmt::Write;
 
 use crate::node::Node;
-
 
 pub struct Graph<N, E>
 where
@@ -84,24 +83,29 @@ where
                 node.value().read().ok().unwrap()
             )
             .unwrap();
-            // if let Ok(edges) = node.edges().read() { // edges label
-            //     for (edge, next) in &edges.1 {
-            //         if let Some(target) = next.upgrade() {
-            //             write!(
-            //                 &mut string,
-            //                 "\n    \"{}\" -> \"{}\" [label=\"{}\"]",
-            //                 key.clone(),
-            //                 target.0,
-            //                 edge
-            //             )
-            //             .unwrap();
-            //         }
-            //     }
-            //     string.push('\n');
-            // }
+            if let Ok(edges) = node.get_head().read() { // edges label
+                for edge in edges.iter() {
+                    if let Ok(head) = edge.head().read() {
+                        if let Ok(tail) = edge.tail().read() {
+                            if let Ok(value) = edge.value().read() {
+                                
+                        write!(
+                            &mut string,
+                            "\n    \"{}\" -> \"{}\" [label=\"{}\"]",
+                            tail,
+                            head,
+                            value,
+                        )
+                        .unwrap();
+                    }
+            }
+                    }   
+            }
+            }
+            string.push('\n');
+            
         }
         string.push('}');
         string
     }
 }
-

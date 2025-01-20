@@ -9,24 +9,18 @@
 // - [ ] Refacto: split graph struct from app code
 // - [ ] Redo: handle edge to get internal mutability, store them in hasmap + node contain WeakEdge
 
-
 use crate::graph::Graph;
+use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock, Weak};
 use uuid::Uuid;
 
-mod graph;
 mod edge;
+mod graph;
 mod node;
 
-
-
 use crate::node::Node;
-
-
-
 
 // #[derive(Clone)]
 // pub enum Edge {
@@ -60,7 +54,7 @@ use crate::node::Node;
 //     }
 // }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Void {}
 
 impl Display for Void {
@@ -82,14 +76,15 @@ fn main() {
     g.insert(n3.clone());
     g.insert(n4.clone());
 
-    //
-    // n1.add_next(n2.clone(), Edge::Direction(Direction::West));
-    // n1.add_previous(n2.clone(), Edge::Direction(Direction::East));
+    
+    n1.add_head(n2.clone(), Void::default());
+    // n1.add_head(n2.clone(), Void::default());
 
-    // n1.add_next(n3.clone());
-    // n2.add_previous(n4.clone());
-    // n3.add_next(n1.clone());
-    // n4.add_previous(n4.clone());
+    n2.add_head(n3.clone(), Void::default());
+    n3.add_tail(n4.clone(), Void::default());
+    n4.add_tail(n1.clone(), Void::default());
 
-    // println!("{}", g.to_dot());
+
+
+    println!("{}", g.to_dot());
 }
