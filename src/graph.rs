@@ -1,8 +1,5 @@
 use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Display;
-use std::fmt::Write;
-use std::sync::{Arc, RwLock, Weak};
+use std::fmt::{Display, Write};
 use uuid::Uuid;
 
 use crate::node::Node;
@@ -13,7 +10,6 @@ where
     E: Clone + Display,
 {
     nodes: HashMap<Uuid, Node<N, E>>,
-    // edges: HashMap<Uuid, Edge<N, E>>,
 }
 
 impl<N, E> Default for Graph<N, E>
@@ -34,10 +30,8 @@ where
     pub fn new() -> Self {
         Self {
             nodes: HashMap::default(),
-            // edges: HashMap::default(),
         }
     }
-
     pub fn contains(&self, key: &Uuid) -> bool {
         self.nodes.contains_key(key)
     }
@@ -50,28 +44,12 @@ where
     pub fn is_empty(&self) -> bool {
         self.nodes.is_empty()
     }
-    pub fn insert(&mut self, node: Node<N, E>) -> bool {
-        if self.nodes.contains_key(&node.key()) {
-            false
-        } else {
-            self.nodes.insert(node.key(), node.clone());
-            true
-        }
+    pub fn insert(&mut self, node: Node<N, E>) {
+        self.nodes.insert(node.key(), node.clone());
     }
-    // pub fn insert_edge(&mut self, edge: Edge<N, E>) -> bool {
-    //     if self.edges.contains_key(&edge.key()) {
-    //         false
-    //     } else {
-    //         self.edges.insert(edge.key(), edge.clone());
-    //         true
-    //     }
-    // }
     pub fn remove(&mut self, key: &Uuid) -> Option<Node<N, E>> {
         self.nodes.remove(key)
     }
-    // pub fn remove_edge(&mut self, key: &Uuid) -> Option<Edge<N, E>> {
-    //     self.edges.remove(key)
-    // }
     pub fn to_dot(&self) -> String {
         let mut string = String::new();
         string.push_str("digraph {\n");
@@ -83,27 +61,26 @@ where
                 node.value().read().ok().unwrap()
             )
             .unwrap();
-            if let Ok(edges) = node.get_head().read() { // edges label
-                for edge in edges.iter() {
-                    if let Ok(head) = edge.head().read() {
-                        if let Ok(tail) = edge.tail().read() {
+            if let Ok(successors) = node.get_direct_successor().read() {
+                // edges label
+                for edge in successors.values() {
+                    if let Some(head) = edge.head().read().unwrap().upgrade() {
+                        if let Some(tail) = edge.tail().read().unwrap().upgrade() {
                             if let Ok(value) = edge.value().read() {
-                                
-                        write!(
-                            &mut string,
-                            "\n    \"{}\" -> \"{}\" [label=\"{}\"]",
-                            tail,
-                            head,
-                            value,
-                        )
-                        .unwrap();
+                                write!(
+                                    &mut string,
+                                    "\n    \"{}\" -> \"{}\" [label=\"{}\"]",
+                                    tail.key(),
+                                    head.key(),
+                                    value,
+                                )
+                                .unwrap();
+                            }
+                        }
                     }
-            }
-                    }   
-            }
+                }
             }
             string.push('\n');
-            
         }
         string.push('}');
         string

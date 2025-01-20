@@ -1,24 +1,23 @@
 use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Display;
-use std::fmt::Write;
+use std::fmt::{Display, Formatter, Result};
 use std::sync::{Arc, RwLock, Weak};
 use uuid::Uuid;
 
 use crate::edge::Edge;
 
-#[derive(Clone)]
+type _WeakNode<N, E> = Weak<(
+    Uuid,
+    RwLock<N>,
+    RwLock<HashMap<Uuid, Edge<N, E>>>, // direct successor
+    RwLock<HashMap<Uuid, Edge<N, E>>>, // direct predecessor
+)>;
+#[derive(Clone, Debug)]
 pub struct WeakNode<N, E>
 where
     N: Clone,
     E: Clone,
 {
-    internal: Weak<(
-        Uuid,
-        RwLock<N>,
-        RwLock<Vec<Edge<N, E>>>,
-        RwLock<Vec<Edge<N, E>>>,
-    )>,
+    internal: _WeakNode<N, E>,
 }
 impl<N, E> WeakNode<N, E>
 where
@@ -29,19 +28,19 @@ where
         self.internal.upgrade().map(|internal| Node { internal })
     }
 }
-
-#[derive(Clone)]
+type ArcNode<N, E> = Arc<(
+    Uuid,
+    RwLock<N>,
+    RwLock<HashMap<Uuid, Edge<N, E>>>, // direct successor
+    RwLock<HashMap<Uuid, Edge<N, E>>>, // direct predecessor
+)>;
+#[derive(Clone, Debug)]
 pub struct Node<N, E>
 where
     N: Clone,
     E: Clone,
 {
-    internal: Arc<(
-        Uuid,
-        RwLock<N>,
-        RwLock<Vec<Edge<N, E>>>, //head
-        RwLock<Vec<Edge<N, E>>>, //tail
-    )>,
+    internal: ArcNode<N, E>,
 }
 
 impl<N, E> Node<N, E>
@@ -54,8 +53,8 @@ where
             internal: Arc::new((
                 Uuid::new_v4(),
                 RwLock::new(value),
-                RwLock::new(Vec::default()),
-                RwLock::new(Vec::default()),
+                RwLock::new(HashMap::default()),
+                RwLock::new(HashMap::default()),
             )),
         }
     }
@@ -70,30 +69,47 @@ where
             internal: Arc::downgrade(&self.internal),
         }
     }
-    pub fn add_head(&self, node: Node<N, E>, edge: E) {
-        if let Ok(mut head) = self.internal.2.write() {
-            head.push(Edge::new(edge.clone(), self.downgrade(), node.downgrade()));
+    pub fn add_direct_successor(&self, node: &Self, edge: E) {
+        let edge = Edge::new(edge.clone(), self.downgrade(), node.downgrade());
+        if let Ok(mut successor) = self.internal.2.write() {
+            successor.insert(edge.key(), edge.clone());
         }
-        if let Ok(mut tail) = node.internal.3.write() {
-            tail.push(Edge::new(edge.clone(), self.downgrade(), node.downgrade()));
-        }
-    }
-
-    pub fn add_tail(&self, node: Node<N, E>, edge: E) {
-        if let Ok(mut tail) = self.internal.3.write() {
-            tail.push(Edge::new(edge.clone(), self.downgrade(), node.downgrade()));
-        }
-        if let Ok(mut head) = node.internal.2.write() {
-            head.push(Edge::new(edge.clone(), self.downgrade(), node.downgrade()));
+        if let Ok(mut predecessor) = node.internal.3.write() {
+            predecessor.insert(edge.key(), edge);
         }
     }
-
-    pub fn get_head(&self) -> &RwLock<Vec<Edge<N, E>>> {
+    pub fn add_direct_predecessor(&self, node: &Self, edge: E) {
+        let edge = Edge::new(edge.clone(), node.downgrade(), self.downgrade());
+        if let Ok(mut successor) = node.internal.2.write() {
+            successor.insert(edge.key(), edge.clone());
+        }
+        if let Ok(mut predecessor) = self.internal.3.write() {
+            predecessor.insert(edge.key(), edge);
+        }
+    }
+    pub fn get_direct_successor(&self) -> &RwLock<HashMap<Uuid, Edge<N, E>>> {
         &self.internal.2
     }
-    pub fn get_tail(&self) -> &RwLock<Vec<Edge<N, E>>> {
+    pub fn get_direct_predecessor(&self) -> &RwLock<HashMap<Uuid, Edge<N, E>>> {
         &self.internal.3
     }
-    // find
-    // remove
+    pub fn remove_edge(&self, edge: Edge<N, E>) {
+        if let Ok(mut head) = self.internal.2.write() {
+            head.remove(&edge.key());
+        }
+        if let Ok(mut tail) = self.internal.3.write() {
+            tail.remove(&edge.key());
+        }
+    }
+    // pub fn search(node, edge uuid ?) -> Edge<N,E> {} TODO depend on needs
+}
+
+impl<N, E> Display for Node<N, E>
+where
+    N: Clone + Display,
+    E: Clone + Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}", self.value().read().unwrap())
+    }
 }
