@@ -16,11 +16,12 @@
 
 use crate::graph::Graph;
 use std::fmt::{Display, Formatter, Result};
+use crate::files::write_to_file;
 
 mod edge;
 mod graph;
 mod node;
-
+mod files;
 use crate::node::Node;
 
 #[derive(Clone, Debug)]
@@ -98,14 +99,14 @@ fn main() {
     // n4.add_direct_predecessor(&n1, Void::default());
 
     growth(&mut g, &root);
-
+    write_to_file(&g.to_dot(),None).unwrap();
     println!("{}", g.to_dot());
     // println!("{:?}", root.get_direct_successor())
 }
 
 fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
     let mut around = [false, false, false, false];
-    if let Ok(edges) = node.get_direct_successor().read() {
+    if let Ok(edges) = node.get_direct_predecessor().read() {
         for element in edges.values() {
             if let Ok(ref value) = element.value().read() {
                 match **value {

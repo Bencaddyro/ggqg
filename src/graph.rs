@@ -50,6 +50,17 @@ where
     pub fn remove(&mut self, key: &Uuid) -> Option<Node<N, E>> {
         self.nodes.remove(key)
     }
+    pub fn filter(&self, f: fn(&Node<N,E>) -> bool) -> Vec<Node<N,E>> {
+        let mut res = Vec::new();
+        for elem in self.nodes.values() {
+            if f(elem) { res.push(elem.clone()) };
+        }
+        res
+        // TODO make more elegant with map / filter ?
+    }
+    
+    
+    
     pub fn to_dot(&self) -> String {
         let mut string = String::new();
         string.push_str("digraph {\n");
