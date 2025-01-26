@@ -1,8 +1,10 @@
+use crate::node::Node;
+use rand::prelude::IteratorRandom;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use std::collections::HashMap;
 use std::fmt::{Display, Write};
 use uuid::Uuid;
-
-use crate::node::Node;
 
 pub struct Graph<N, E>
 where
@@ -50,17 +52,35 @@ where
     pub fn remove(&mut self, key: &Uuid) -> Option<Node<N, E>> {
         self.nodes.remove(key)
     }
-    pub fn filter(&self, f: fn(&Node<N,E>) -> bool) -> Vec<Node<N,E>> {
+    pub fn filter(&self, f: fn(&Node<N, E>) -> bool) -> Vec<Node<N, E>> {
         let mut res = Vec::new();
         for elem in self.nodes.values() {
-            if f(elem) { res.push(elem.clone()) };
+            if f(elem) {
+                res.push(elem.clone())
+            };
         }
         res
         // TODO make more elegant with map / filter ?
+        // .map(|x| if f(x) {x}).collect() ?
     }
-    
-    
-    
+
+    pub fn get_roots(&self) -> Vec<Node<N, E>> {
+        let mut res = Vec::new();
+        for elem in self.nodes.values() {
+            if let Ok(predecessor) = elem.get_direct_predecessor().read() {
+                if predecessor.is_empty() {
+                    res.push(elem.clone());
+                }
+            }
+        }
+        res
+    }
+
+    pub fn get_random(&self) -> Option<Node<N, E>> {
+        let mut rng = thread_rng();
+        self.nodes.values().choose(&mut rng).cloned()
+    }
+
     pub fn to_dot(&self) -> String {
         let mut string = String::new();
         string.push_str("digraph {\n");
