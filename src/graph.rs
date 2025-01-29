@@ -1,6 +1,5 @@
 use crate::node::Node;
 use rand::prelude::IteratorRandom;
-use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
 use std::fmt::{Display, Write};

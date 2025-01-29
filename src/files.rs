@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local};
+use chrono::Local;
 use std::fs;
 
 pub fn write_to_file(content: &str, label: Option<&str>) -> std::io::Result<()> {
