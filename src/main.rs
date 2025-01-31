@@ -42,7 +42,7 @@ impl Display for Edge {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
             Edge::None => write!(f, ""),
-            Edge::Proximity(_) => write!(f, ""),
+            Edge::Proximity(p) => write!(f, "{p}"),
             Edge::Direction(d) => write!(f, "{d}"),
         }
     }
@@ -212,7 +212,7 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
         _ => return,
     }
 
-    let mut border = vec![]; // new border
+    let mut border = [None, None, None,None]; // new border
 
     // get neighbours
     let mut around = [false, false, false, false];
@@ -258,25 +258,25 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
     if !around[0] {
         let new_node = Node::new(NodeState::Border);
         node.add_direct_successor(&new_node, Edge::Direction(Direction::South));
-        border.push(new_node.clone());
+        border[0] = Some(new_node.clone());
         tree.insert(new_node);
     }
     if !around[1] {
         let new_node = Node::new(NodeState::Border);
         node.add_direct_successor(&new_node, Edge::Direction(Direction::North));
-        border.push(new_node.clone());
+        border[1] = Some(new_node.clone());
         tree.insert(new_node);
     }
     if !around[2] {
         let new_node = Node::new(NodeState::Border);
         node.add_direct_successor(&new_node, Edge::Direction(Direction::West));
-        border.push(new_node.clone());
+        border[2] = Some(new_node.clone());
         tree.insert(new_node);
     }
     if !around[3] {
         let new_node = Node::new(NodeState::Border);
         node.add_direct_successor(&new_node, Edge::Direction(Direction::East));
-        border.push(new_node.clone());
+        border[3] = Some(new_node.clone());
         tree.insert(new_node);
     }
     if let Ok(mut value) = node.value().write() {
@@ -284,12 +284,32 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
     }
 
     // link neighbours to proximity in NxN pattern
-    for i in 0..border.len() {
-        for j in i + 1..border.len() {
-            border[i].add_direct_successor(&border[j], Edge::Proximity(String::new()));
-            border[j].add_direct_successor(&border[i], Edge::Proximity(String::new()));
-        }
+    if let (Some(bnode_a),Some(bnode_b)) = (border[0].clone(),border[1].clone()) {
+        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("NN")));
+        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("SS")));
     }
+    if let (Some(bnode_a),Some(bnode_b)) = (border[0].clone(),border[2].clone()) {
+        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("NW")));
+        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("ES")));
+    }
+    if let (Some(bnode_a),Some(bnode_b)) = (border[0].clone(),border[3].clone()) {
+        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("NW")));
+        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("WS")));
+    }
+    if let (Some(bnode_a),Some(bnode_b)) = (border[1].clone(),border[2].clone()) {
+        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("SW")));
+        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("EN")));
+    }
+    if let (Some(bnode_a),Some(bnode_b)) = (border[1].clone(),border[3].clone()) {
+        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("SE")));
+        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("WN")));
+    }
+    if let (Some(bnode_a),Some(bnode_b)) = (border[2].clone(),border[3].clone()) {
+        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("EE")));
+        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("WW")));
+    }
+
+
 
     // move promiximity of current to new Border
     let mut remove_head = vec![];
@@ -321,12 +341,15 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
             .remove_edge(edge.clone());
 
         for bnode in &border {
+            if let Some(bnode) = bnode {
+
             edge.head()
                 .read()
                 .unwrap()
                 .upgrade()
                 .unwrap()
                 .add_direct_predecessor(&bnode, Edge::Proximity(String::new()))
+        }
         }
     }
     // println!("Remove tail edge");
@@ -341,12 +364,14 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
             .remove_edge(edge.clone());
 
         for bnode in &border {
+            if let Some(bnode) = bnode {
             edge.tail()
                 .read()
                 .unwrap()
                 .upgrade()
                 .unwrap()
                 .add_direct_successor(&bnode, Edge::Proximity(String::new()))
+        }
         }
     }
 }
