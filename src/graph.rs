@@ -86,9 +86,10 @@ where
         for (key, node) in self.nodes.iter() {
             write!(
                 &mut string,
-                "    \"{}\"[label=\"{}\"]",
+                "    \"{}\"[label=\"{}-{}\"]",
                 key.clone(),
-                node.value().read().ok().unwrap()
+                node.value().read().ok().unwrap(),
+                key.clone().to_string()[..6].to_string(),
             )
             .unwrap();
             if let Ok(successors) = node.get_direct_successor().read() {

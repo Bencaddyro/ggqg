@@ -94,6 +94,11 @@ where
         &self.internal.3
     }
     pub fn remove_edge(&self, edge: Edge<N, E>) {
+        //  println!("Remove edge from {} to {}",
+        //          edge.tail().read().unwrap().upgrade().unwrap().key().to_string()[..6].to_string(),
+        //          edge.head().read().unwrap().upgrade().unwrap().key().to_string()[..6].to_string(),
+        //          );
+
         if let Ok(mut head) = self.internal.2.write() {
             head.remove(&edge.key());
         }
