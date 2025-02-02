@@ -1,4 +1,5 @@
 use crate::node::Node;
+use crate::Edge;
 use rand::prelude::IteratorRandom;
 use rand::thread_rng;
 use std::collections::HashMap;

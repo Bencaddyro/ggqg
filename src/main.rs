@@ -29,20 +29,27 @@ use crate::node::Node;
 pub enum Edge {
     None,
     Direction(Direction),
-    Proximity(String),
+    Proximity(Vec<Direction>),
 }
 #[derive(PartialEq, Clone, Debug)]
 pub enum Direction {
-    North,
-    South,
-    East,
-    West,
+    NorthSouth(bool),
+    // South,
+    EastWest(bool),
+    // West,
 }
+
 impl Display for Edge {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
             Edge::None => write!(f, ""),
-            Edge::Proximity(p) => write!(f, "{p}"),
+            Edge::Proximity(p) => {
+                write!(f, "[")?;
+                for e in p {
+                    write!(f, "{e},")?
+                }
+                write!(f, "]")
+            }
             Edge::Direction(d) => write!(f, "{d}"),
         }
     }
@@ -51,10 +58,10 @@ impl Display for Edge {
 impl Display for Direction {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
-            Direction::North => write!(f, "North"),
-            Direction::South => write!(f, "South"),
-            Direction::East => write!(f, "East"),
-            Direction::West => write!(f, "West"),
+            Direction::NorthSouth(true) => write!(f, "North"),
+            Direction::NorthSouth(false) => write!(f, "South"),
+            Direction::EastWest(true) => write!(f, "East"),
+            Direction::EastWest(false) => write!(f, "West"),
         }
     }
 }
@@ -76,6 +83,24 @@ impl Display for NodeState {
     }
 }
 
+fn normalize(path: &mut Vec<Direction>) {
+    if path.contains(&Direction::NorthSouth(true)) && path.contains(&Direction::NorthSouth(false)) {
+        if let Some(pos) = path.iter().position(|x| *x == Direction::NorthSouth(true)) {
+            path.remove(pos);
+        }
+        if let Some(pos) = path.iter().position(|x| *x == Direction::NorthSouth(false)) {
+            path.remove(pos);
+        }
+    }
+    if path.contains(&Direction::EastWest(true)) && path.contains(&Direction::EastWest(false)) {
+        if let Some(pos) = path.iter().position(|x| *x == Direction::EastWest(true)) {
+            path.remove(pos);
+        }
+        if let Some(pos) = path.iter().position(|x| *x == Direction::EastWest(false)) {
+            path.remove(pos);
+        }
+    }
+}
 // #[derive(Clone, Default)]
 // pub struct Void {}
 //
@@ -105,10 +130,10 @@ fn main() {
         io::stdin().read_line(&mut input_string).unwrap();
         match input_string.trim() {
             "x" => break,
-            "z" => current_node = get_next(current_node, Direction::North).unwrap(),
-            "q" => current_node = get_next(current_node, Direction::West).unwrap(),
-            "s" => current_node = get_next(current_node, Direction::South).unwrap(),
-            "d" => current_node = get_next(current_node, Direction::East).unwrap(),
+            "z" => current_node = get_next(current_node, Direction::NorthSouth(true)).unwrap(),
+            "q" => current_node = get_next(current_node, Direction::EastWest(false)).unwrap(),
+            "s" => current_node = get_next(current_node, Direction::NorthSouth(false)).unwrap(),
+            "d" => current_node = get_next(current_node, Direction::EastWest(true)).unwrap(),
             _ => println!("x to quit, zqsd to move"),
         }
     }
@@ -212,41 +237,75 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
         _ => return,
     }
 
-    let mut border = [None, None, None,None]; // new border
+    let mut border = [None, None, None, None]; // new border
 
     // get neighbours
     let mut around = [false, false, false, false];
     if let Ok(edges) = node.get_direct_predecessor().read() {
         for edge in edges.values() {
             if let Ok(ref value) = edge.value().read() {
-                match **value {
-                    Edge::Direction(Direction::North) => {
+                match &**value {
+                    Edge::Direction(Direction::NorthSouth(true)) => {
                         node.add_direct_successor(
                             &edge.tail().read().unwrap().upgrade().unwrap(),
-                            Edge::Direction(Direction::South),
+                            Edge::Direction(Direction::NorthSouth(false)),
                         );
                         around[0] = true
                     }
-                    Edge::Direction(Direction::South) => {
+                    Edge::Direction(Direction::NorthSouth(false)) => {
                         node.add_direct_successor(
                             &edge.tail().read().unwrap().upgrade().unwrap(),
-                            Edge::Direction(Direction::North),
+                            Edge::Direction(Direction::NorthSouth(true)),
                         );
                         around[1] = true
                     }
-                    Edge::Direction(Direction::East) => {
+                    Edge::Direction(Direction::EastWest(true)) => {
                         node.add_direct_successor(
                             &edge.tail().read().unwrap().upgrade().unwrap(),
-                            Edge::Direction(Direction::West),
+                            Edge::Direction(Direction::EastWest(false)),
                         );
                         around[2] = true
                     }
-                    Edge::Direction(Direction::West) => {
+                    Edge::Direction(Direction::EastWest(false)) => {
                         node.add_direct_successor(
                             &edge.tail().read().unwrap().upgrade().unwrap(),
-                            Edge::Direction(Direction::East),
+                            Edge::Direction(Direction::EastWest(true)),
                         );
                         around[3] = true
+                    }
+                    Edge::Proximity(p) => {
+                        if p.len() == 1 {
+                            match p[0] {
+                                Direction::NorthSouth(true) => {
+                                    node.add_direct_successor(
+                                        &edge.tail().read().unwrap().upgrade().unwrap(),
+                                        Edge::Direction(Direction::NorthSouth(false)),
+                                    );
+                                    around[0] = true
+                                }
+                                Direction::NorthSouth(false) => {
+                                    node.add_direct_successor(
+                                        &edge.tail().read().unwrap().upgrade().unwrap(),
+                                        Edge::Direction(Direction::NorthSouth(true)),
+                                    );
+                                    around[1] = true
+                                }
+                                Direction::EastWest(true) => {
+                                    node.add_direct_successor(
+                                        &edge.tail().read().unwrap().upgrade().unwrap(),
+                                        Edge::Direction(Direction::EastWest(false)),
+                                    );
+                                    around[2] = true
+                                }
+                                Direction::EastWest(false) => {
+                                    node.add_direct_successor(
+                                        &edge.tail().read().unwrap().upgrade().unwrap(),
+                                        Edge::Direction(Direction::EastWest(true)),
+                                    );
+                                    around[3] = true
+                                }
+                            }
+                        }
                     }
                     _ => (),
                 }
@@ -257,25 +316,25 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
     // create neighbours if need
     if !around[0] {
         let new_node = Node::new(NodeState::Border);
-        node.add_direct_successor(&new_node, Edge::Direction(Direction::South));
+        node.add_direct_successor(&new_node, Edge::Direction(Direction::NorthSouth(false)));
         border[0] = Some(new_node.clone());
         tree.insert(new_node);
     }
     if !around[1] {
         let new_node = Node::new(NodeState::Border);
-        node.add_direct_successor(&new_node, Edge::Direction(Direction::North));
+        node.add_direct_successor(&new_node, Edge::Direction(Direction::NorthSouth(true)));
         border[1] = Some(new_node.clone());
         tree.insert(new_node);
     }
     if !around[2] {
         let new_node = Node::new(NodeState::Border);
-        node.add_direct_successor(&new_node, Edge::Direction(Direction::West));
+        node.add_direct_successor(&new_node, Edge::Direction(Direction::EastWest(false)));
         border[2] = Some(new_node.clone());
         tree.insert(new_node);
     }
     if !around[3] {
         let new_node = Node::new(NodeState::Border);
-        node.add_direct_successor(&new_node, Edge::Direction(Direction::East));
+        node.add_direct_successor(&new_node, Edge::Direction(Direction::EastWest(true)));
         border[3] = Some(new_node.clone());
         tree.insert(new_node);
     }
@@ -284,32 +343,90 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
     }
 
     // link neighbours to proximity in NxN pattern
-    if let (Some(bnode_a),Some(bnode_b)) = (border[0].clone(),border[1].clone()) {
-        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("NN")));
-        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("SS")));
+    if let (Some(bnode_a), Some(bnode_b)) = (border[0].clone(), border[1].clone()) {
+        bnode_a.add_direct_successor(
+            &bnode_b,
+            Edge::Proximity(vec![
+                Direction::NorthSouth(true),
+                Direction::NorthSouth(true),
+            ]),
+        );
+        bnode_b.add_direct_successor(
+            &bnode_a,
+            Edge::Proximity(vec![
+                Direction::NorthSouth(false),
+                Direction::NorthSouth(false),
+            ]),
+        );
     }
-    if let (Some(bnode_a),Some(bnode_b)) = (border[0].clone(),border[2].clone()) {
-        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("NW")));
-        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("ES")));
+    if let (Some(bnode_a), Some(bnode_b)) = (border[0].clone(), border[2].clone()) {
+        bnode_a.add_direct_successor(
+            &bnode_b,
+            Edge::Proximity(vec![
+                Direction::NorthSouth(true),
+                Direction::EastWest(false),
+            ]),
+        );
+        bnode_b.add_direct_successor(
+            &bnode_a,
+            Edge::Proximity(vec![
+                Direction::NorthSouth(false),
+                Direction::EastWest(true),
+            ]),
+        );
     }
-    if let (Some(bnode_a),Some(bnode_b)) = (border[0].clone(),border[3].clone()) {
-        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("NW")));
-        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("WS")));
+    if let (Some(bnode_a), Some(bnode_b)) = (border[0].clone(), border[3].clone()) {
+        bnode_a.add_direct_successor(
+            &bnode_b,
+            Edge::Proximity(vec![Direction::NorthSouth(true), Direction::EastWest(true)]),
+        );
+        bnode_b.add_direct_successor(
+            &bnode_a,
+            Edge::Proximity(vec![
+                Direction::NorthSouth(false),
+                Direction::EastWest(false),
+            ]),
+        );
     }
-    if let (Some(bnode_a),Some(bnode_b)) = (border[1].clone(),border[2].clone()) {
-        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("SW")));
-        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("EN")));
+    if let (Some(bnode_a), Some(bnode_b)) = (border[1].clone(), border[2].clone()) {
+        bnode_a.add_direct_successor(
+            &bnode_b,
+            Edge::Proximity(vec![
+                Direction::NorthSouth(false),
+                Direction::EastWest(false),
+            ]),
+        );
+        bnode_b.add_direct_successor(
+            &bnode_a,
+            Edge::Proximity(vec![Direction::NorthSouth(true), Direction::EastWest(true)]),
+        );
     }
-    if let (Some(bnode_a),Some(bnode_b)) = (border[1].clone(),border[3].clone()) {
-        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("SE")));
-        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("WN")));
+    if let (Some(bnode_a), Some(bnode_b)) = (border[1].clone(), border[3].clone()) {
+        bnode_a.add_direct_successor(
+            &bnode_b,
+            Edge::Proximity(vec![
+                Direction::NorthSouth(false),
+                Direction::EastWest(true),
+            ]),
+        );
+        bnode_b.add_direct_successor(
+            &bnode_a,
+            Edge::Proximity(vec![
+                Direction::NorthSouth(true),
+                Direction::EastWest(false),
+            ]),
+        );
     }
-    if let (Some(bnode_a),Some(bnode_b)) = (border[2].clone(),border[3].clone()) {
-        bnode_a.add_direct_successor(&bnode_b, Edge::Proximity(String::from("EE")));
-        bnode_b.add_direct_successor(&bnode_a, Edge::Proximity(String::from("WW")));
+    if let (Some(bnode_a), Some(bnode_b)) = (border[2].clone(), border[3].clone()) {
+        bnode_a.add_direct_successor(
+            &bnode_b,
+            Edge::Proximity(vec![Direction::EastWest(true), Direction::EastWest(true)]),
+        );
+        bnode_b.add_direct_successor(
+            &bnode_a,
+            Edge::Proximity(vec![Direction::EastWest(false), Direction::EastWest(false)]),
+        );
     }
-
-
 
     // move promiximity of current to new Border
     let mut remove_head = vec![];
@@ -340,16 +457,34 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
             .unwrap()
             .remove_edge(edge.clone());
 
-        for bnode in &border {
-            if let Some(bnode) = bnode {
+        let basepath = if let Ok(edge) = edge.value().read() {
+            match &*edge {
+                Edge::Proximity(p) => p.clone(),
+                _ => vec![],
+            }
+        } else {
+            vec![]
+        };
 
-            edge.head()
-                .read()
-                .unwrap()
-                .upgrade()
-                .unwrap()
-                .add_direct_predecessor(&bnode, Edge::Proximity(String::new()))
-        }
+        for (i, bnode) in border.iter().enumerate() {
+            let mut path = basepath.clone();
+            match i {
+                0 => path.push(Direction::NorthSouth(true)),
+                1 => path.push(Direction::NorthSouth(false)),
+                2 => path.push(Direction::EastWest(true)),
+                3 => path.push(Direction::EastWest(false)),
+                _ => (),
+            }
+            normalize(&mut path);
+
+            if let Some(bnode) = bnode {
+                edge.head()
+                    .read()
+                    .unwrap()
+                    .upgrade()
+                    .unwrap()
+                    .add_direct_predecessor(&bnode, Edge::Proximity(path))
+            }
         }
     }
     // println!("Remove tail edge");
@@ -362,16 +497,33 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
             .upgrade()
             .unwrap()
             .remove_edge(edge.clone());
+        let basepath = if let Ok(edge) = edge.value().read() {
+            match &*edge {
+                Edge::Proximity(p) => p.clone(),
+                _ => vec![],
+            }
+        } else {
+            vec![]
+        };
+        for (i, bnode) in border.iter().enumerate() {
+            let mut path = basepath.clone();
+            match i {
+                0 => path.push(Direction::NorthSouth(false)),
+                1 => path.push(Direction::NorthSouth(true)),
+                2 => path.push(Direction::EastWest(false)),
+                3 => path.push(Direction::EastWest(true)),
+                _ => (),
+            }
+            normalize(&mut path);
 
-        for bnode in &border {
             if let Some(bnode) = bnode {
-            edge.tail()
-                .read()
-                .unwrap()
-                .upgrade()
-                .unwrap()
-                .add_direct_successor(&bnode, Edge::Proximity(String::new()))
-        }
+                edge.tail()
+                    .read()
+                    .unwrap()
+                    .upgrade()
+                    .unwrap()
+                    .add_direct_successor(&bnode, Edge::Proximity(path))
+            }
         }
     }
 }
