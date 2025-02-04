@@ -1,18 +1,14 @@
-// - [x] Define tree struct (in Rust ownership logic)
-// - [x] Spawn base tree
-// - [x] Print base tree
-
 // Rewrite Engine
 // - [ ] Rewrite node based on rule
 // - [ ] Define rule
 
-// Map toy example
-// - [ ] Inner logic of expanding tree until all node is atomic
-// - [ ] Basic operation
-// - [ ] Toy example: random grow, pick a unexpanded node, expand it, repeat N time in 3 Direction
+// Cleanup direction & growth
+// StateNode : Place(Border/Generated)
+// Cleanup rewrite border path (vec ? or hashmap ?)
+// growth with a pattern (aka radiux problem)
 
-// Printer
-// print to dot file directly, with iteration numbert
+// Quest engine ?
+// rule -> waht format ? graph also ?
 
 use crate::files::write_to_file;
 use crate::graph::Graph;
@@ -23,6 +19,7 @@ mod edge;
 mod files;
 mod graph;
 mod node;
+mod quest;
 use crate::node::Node;
 
 #[derive(Clone, Debug)]
