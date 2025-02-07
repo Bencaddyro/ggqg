@@ -10,6 +10,8 @@
 // Quest engine ?
 // rule -> waht format ? graph also ?
 
+use quest::Quest;
+
 use crate::files::write_to_file;
 use crate::graph::Graph;
 use std::fmt::{Display, Formatter, Result};
@@ -112,28 +114,32 @@ fn main() {
     let mut current_node = Node::new(NodeState::Border);
     g.insert(current_node.clone());
 
+    let quest = Quest::default();
+
+    println!("{quest}");
+
     // TODO prompt to be improve with https://github.com/mikaelmello/inquire crate
-    println!("ggqg v 0.0");
-    println!("x to quit, zqsd to move");
-    let mut input_string = String::new();
-
-    loop {
-        growth(&mut g, &current_node);
-        write_to_file(&g.to_dot(), None).unwrap();
-        write_to_file(&g.to_dot(), Some("live")).unwrap();
-
-        println!("You are in {}", current_node.value().read().unwrap());
-        input_string.clear();
-        io::stdin().read_line(&mut input_string).unwrap();
-        match input_string.trim() {
-            "x" => break,
-            "z" => current_node = get_next(current_node, Direction::NorthSouth(true)).unwrap(),
-            "q" => current_node = get_next(current_node, Direction::EastWest(false)).unwrap(),
-            "s" => current_node = get_next(current_node, Direction::NorthSouth(false)).unwrap(),
-            "d" => current_node = get_next(current_node, Direction::EastWest(true)).unwrap(),
-            _ => println!("x to quit, zqsd to move"),
-        }
-    }
+    // println!("ggqg v 0.0");
+    // println!("x to quit, zqsd to move");
+    // let mut input_string = String::new();
+    //
+    // loop {
+    //     growth(&mut g, &current_node);
+    //     write_to_file(&g.to_dot(), None).unwrap();
+    //     write_to_file(&g.to_dot(), Some("live")).unwrap();
+    //
+    //     println!("You are in {}", current_node.value().read().unwrap());
+    //     input_string.clear();
+    //     io::stdin().read_line(&mut input_string).unwrap();
+    //     match input_string.trim() {
+    //         "x" => break,
+    //         "z" => current_node = get_next(current_node, Direction::NorthSouth(true)).unwrap(),
+    //         "q" => current_node = get_next(current_node, Direction::EastWest(false)).unwrap(),
+    //         "s" => current_node = get_next(current_node, Direction::NorthSouth(false)).unwrap(),
+    //         "d" => current_node = get_next(current_node, Direction::EastWest(true)).unwrap(),
+    //         _ => println!("x to quit, zqsd to move"),
+    //     }
+    // }
 }
 
 fn get_next(node: Node<NodeState, Edge>, direction: Direction) -> Option<Node<NodeState, Edge>> {
@@ -430,16 +436,14 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
     let mut remove_tail = vec![];
 
     for edge in node.get_direct_successor().read().unwrap().values() {
-        match *edge.value().read().unwrap() {
-            Edge::Proximity(_) => remove_head.push(edge.clone()),
-            _ => (),
+        if let Edge::Proximity(_) = *edge.value().read().unwrap() {
+            remove_head.push(edge.clone())
         }
     }
 
     for edge in node.get_direct_predecessor().read().unwrap().values() {
-        match *edge.value().read().unwrap() {
-            Edge::Proximity(_) => remove_tail.push(edge.clone()),
-            _ => (),
+        if let Edge::Proximity(_) = *edge.value().read().unwrap() {
+            remove_tail.push(edge.clone())
         }
     }
 
@@ -480,7 +484,7 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
                     .unwrap()
                     .upgrade()
                     .unwrap()
-                    .add_direct_predecessor(&bnode, Edge::Proximity(path))
+                    .add_direct_predecessor(bnode, Edge::Proximity(path))
             }
         }
     }
@@ -519,7 +523,7 @@ fn growth(tree: &mut Graph<NodeState, Edge>, node: &Node<NodeState, Edge>) {
                     .unwrap()
                     .upgrade()
                     .unwrap()
-                    .add_direct_successor(&bnode, Edge::Proximity(path))
+                    .add_direct_successor(bnode, Edge::Proximity(path))
             }
         }
     }

@@ -1,5 +1,4 @@
 use crate::node::Node;
-use crate::Edge;
 use rand::prelude::IteratorRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
@@ -90,7 +89,7 @@ where
                 "    \"{}\"[label=\"{}-{}\"]",
                 key.clone(),
                 node.value().read().ok().unwrap(),
-                key.clone().to_string()[..6].to_string(),
+                &key.clone().to_string()[..6],
             )
             .unwrap();
             if let Ok(successors) = node.get_direct_successor().read() {
